@@ -1,7 +1,5 @@
-import { Component } from '@angular/core';
-import { retry } from 'rxjs/operators';
-
-import { ApiService } from './api.service';
+import { Component, ViewChild } from '@angular/core';
+import { MatDrawer } from '@angular/material/sidenav';
 
 @Component({
   selector: 'app-root',
@@ -9,20 +7,18 @@ import { ApiService } from './api.service';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-  title = 'timing-ui';
-  offset = '00:00:00';
+  @ViewChild('drawer') drawer: MatDrawer;
 
-  showSidenav = false;
+  title = 'timing-ui';
+
   links: [link: string, label: string][] = [
-    ['foo', 'Foo'],
-    ['bla', 'BliBlaBlubb'],
+    ['show-time', 'Zeit anzeigen'],
+    ['timer-settings', 'Timer-Einstellungen'],
+    ['start-blocks', 'Blöcke starten'],
+    ['monitor-finishers', 'Finisher überwachen'],
+    ['show-finishers', 'Finisher anzeigen'],
+    ['show-top-finishers', 'Top Finisher anzeigen'],
   ];
 
-  constructor(private apiService: ApiService) {
-    this.apiService.getTime().subscribe((time) => console.log(time));
-  }
-
-  startTime(): void {
-    this.apiService.startTimer(this.offset).subscribe();
-  }
+  constructor() {}
 }

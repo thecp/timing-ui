@@ -5,23 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
+	"github.com/thecp/timing-api/storage"
 )
 
-type StartTime struct {
-	ID        int64  `json:"id" db:"id"`
-	StartTime string `json:"startTime" db:"startTime"`
-	Started   bool   `json:"started" db:"started"`
-}
-
 var timer *time.Duration = nil
+var quitTimer chan struct{} = nil
 var db *sqlx.DB
 var wsConn *websocket.Conn
 
@@ -38,8 +32,13 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/start-timer", startTimer)
-	r.HandleFunc("/start-block", startBlock)
-	r.HandleFunc("/get-block", getBlock)
+	r.HandleFunc("/stop-timer", stopTimer)
+	r.HandleFunc("/get-blocks", getBlocks)
+	r.HandleFunc("/start-block/{id:[0-9]+}", startBlock)
+	r.HandleFunc("/top-finishers", topFinishers)
+	r.HandleFunc("/last-finishers", lastFinishers)
+	r.HandleFunc("/set-finisher-time", setTime)
+
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Access-Control-Allow-Origin", "*")
@@ -74,43 +73,107 @@ func startTimer(w http.ResponseWriter, r *http.Request) {
 	params := r.URL.Query()["offset"]
 	var offset time.Duration
 	if len(params) > 0 {
-		t := strings.Split(params[0], ":")
-		h, _ := strconv.Atoi(t[0])
-		m, _ := strconv.Atoi(t[1])
-		s, _ := strconv.Atoi(t[2])
-		offset += (time.Duration(h) * time.Hour) + (time.Duration(m) * time.Minute) + (time.Duration(s) * time.Second)
+		offset += storage.FromTime(params[0])
 	}
 
-	beginTimer(offset)
-	w.Write([]byte(string(offset)))
+	if err := beginTimer(offset); err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
+	}
+
+	w.WriteHeader(204)
 }
 
-func getBlock(w http.ResponseWriter, r *http.Request) {
-	startTimes := []StartTime{}
-	if err := db.Select(&startTimes, "SELECT id, startTime, started FROM blocks"); err != nil {
+func stopTimer(w http.ResponseWriter, r *http.Request) {
+	if quitTimer != nil {
+		quitTimer <- struct{}{}
+	}
+	w.WriteHeader(204)
+}
+
+func getBlocks(w http.ResponseWriter, r *http.Request) {
+	blocks, err := storage.GetBlocks(db)
+	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf(`"Hat nicht funktioniert: %s"`, err)))
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
 	}
 
 	decoder := json.NewEncoder(w)
-	decoder.Encode(startTimes)
+	decoder.Encode(blocks)
 }
 
 func startBlock(w http.ResponseWriter, r *http.Request) {
-	params := r.URL.Query()["start-time"]
-	if len(params) < 1 {
-		w.Write([]byte(`"Startzeit nicht angegeben"`))
+	if timer == nil {
 		w.WriteHeader(500)
+		w.Write([]byte(`"Timer nicht gestartet"`))
 		return
 	}
 
-	if _, err := db.Exec("UPDATE starters SET startTime := ?", params[0]); err != nil {
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf(`"Hat nicht funktioniert: %s"`, err)))
+		w.Write([]byte(`"Block ID nicht angegeben"`))
 		return
 	}
 
-	w.Write([]byte(""))
+	if err := storage.StartBlock(db, id, timer); err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
+	}
+
+	w.WriteHeader(204)
+}
+
+func topFinishers(w http.ResponseWriter, r *http.Request) {
+	resultMap, err := storage.TopFinishers(db)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
+	}
+
+	decoder := json.NewEncoder(w)
+	decoder.Encode(resultMap)
+}
+
+func lastFinishers(w http.ResponseWriter, r *http.Request) {
+	finishers, err := storage.LastFinishers(db)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
+	}
+
+	decoder := json.NewEncoder(w)
+	decoder.Encode(finishers)
+}
+
+func setTime(w http.ResponseWriter, r *http.Request) {
+	stnoParams := r.URL.Query()["stno"]
+	if len(stnoParams) == 0 {
+		w.WriteHeader(500)
+		w.Write([]byte(`"Startnummer vergessen"`))
+		return
+	}
+
+	timeParams := r.URL.Query()["time"]
+	if len(timeParams) == 0 {
+		w.WriteHeader(500)
+		w.Write([]byte(`"Zeit vergessen"`))
+		return
+	}
+
+	if err := storage.SetTime(db, timeParams[0], stnoParams[0]); err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf(`"%s"`, err)))
+		return
+	}
+
+	w.WriteHeader(204)
 }
 
 func beginTimer(offset time.Duration) error {
@@ -122,15 +185,16 @@ func beginTimer(offset time.Duration) error {
 	timer = &offset
 
 	ticker := time.NewTicker(1 * time.Second)
-	quit := make(chan struct{})
+	quitTimer = make(chan struct{})
+
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
 				(*timer) += time.Second
 				pushTime(*timer)
-			case <-quit:
-				ticker.Stop()
+			case <-quitTimer:
+				timer = nil
 				return
 			}
 		}
@@ -144,14 +208,8 @@ func pushTime(d time.Duration) {
 		return
 	}
 
-	d = d.Round(time.Second)
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	d -= m * time.Minute
-	s := d / time.Second
+	t := storage.CurrentTime(d)
 
-	t := fmt.Sprintf(`"%02d:%02d:%02d"`, h, m, s)
 	if err := wsConn.WriteMessage(1, []byte(t)); err != nil {
 		fmt.Println(err)
 	}

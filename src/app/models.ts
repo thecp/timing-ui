@@ -1,12 +1,15 @@
-interface Athlete {
-  name: string;
+export interface Starter {
+  lastname: string;
+  firstname: string;
   stno: number;
 }
 
-export interface Starter extends Athlete {
-  startTime: string;
+export interface Finisher extends Starter {
+  netto: string;
 }
 
-export interface Finisher extends Athlete {
-  time: string;
+export interface Block {
+  id: number;
+  startTime: string;
+  starters: Starter[];
 }

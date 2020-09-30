@@ -2,34 +2,36 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatCardModule } from '@angular/material/card';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { MatTableModule } from '@angular/material/table';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { ShowTimeComponent } from './show-time/show-time.component';
-import { ShowStartersComponent } from './show-starters/show-starters.component';
 import { ShowFinishersComponent } from './show-finishers/show-finishers.component';
-import { MonitorStartersComponent } from './monitor-starters/monitor-starters.component';
 import { MonitorFinishersComponent } from './monitor-finishers/monitor-finishers.component';
-import { SettingsComponent } from './settings/settings.component';
+import { TimerSettingsComponent } from './timer-settings/timer-settings.component';
 import { ShowTopFinishersComponent } from './show-top-finishers/show-top-finishers.component';
-import { BlocksComponent } from './blocks/blocks.component';
+import { StartBlocksComponent } from './start-blocks/start-blocks.component';
+import { XhrInterceptor } from './xhr.interceptor';
 
 @NgModule({
   declarations: [
     AppComponent,
     ShowTimeComponent,
-    ShowStartersComponent,
     ShowFinishersComponent,
-    MonitorStartersComponent,
     MonitorFinishersComponent,
-    SettingsComponent,
+    TimerSettingsComponent,
     ShowTopFinishersComponent,
-    BlocksComponent,
+    StartBlocksComponent,
   ],
   imports: [
     BrowserModule,
@@ -41,8 +43,19 @@ import { BlocksComponent } from './blocks/blocks.component';
     MatSidenavModule,
     MatListModule,
     MatIconModule,
+    MatButtonModule,
+    MatSnackBarModule,
+    MatCardModule,
+    MatGridListModule,
+    MatTableModule,
   ],
-  providers: [],
+  providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: XhrInterceptor,
+      multi: true,
+    },
+  ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}

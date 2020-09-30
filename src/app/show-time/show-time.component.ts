@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { webSocket } from 'rxjs/webSocket';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+
+import { ApiService } from '../api.service';
 
 @Component({
   selector: 'app-show-time',
@@ -13,16 +14,12 @@ export class ShowTimeComponent implements OnInit, OnDestroy {
 
   time = '00:00:00';
 
-  constructor() {}
+  constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
-    const subject = webSocket('ws://localhost:8081');
-
-    subject.pipe(takeUntil(this.ngUnsubscribe$)).subscribe(
-      (time: string) => (this.time = time),
-      (err) => console.log(err), // Called if at any point WebSocket API signals some kind of error.
-      () => console.log('complete') // Called when connection is closed (for whatever reason).
-    );
+    this.apiService.time$
+      .pipe(takeUntil(this.ngUnsubscribe$))
+      .subscribe((time) => (this.time = time));
   }
 
   ngOnDestroy(): void {

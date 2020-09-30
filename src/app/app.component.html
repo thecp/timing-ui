@@ -1,51 +1,25 @@
-<mat-toolbar color="primary">
-  <button
-    mat-icon-button
-    class="example-icon"
-    aria-label="Example icon-button with menu icon"
-  >
-    test
-  </button>
-  <span>My App</span>
-  <span class="example-spacer"></span>
-  <button
-    mat-icon-button
-    class="example-icon favorite-icon"
-    aria-label="Example icon-button with heart icon"
-  >
-    test
-  </button>
-  <button
-    mat-icon-button
-    class="example-icon"
-    aria-label="Example icon-button with share icon"
-  >
-    test
-  </button>
-</mat-toolbar>
-
-<app-blocks> </app-blocks>
-
-<input type="text" placeholder="00:01:02" [(ngModel)]="offset" /><button
-  (click)="startTime()"
->
-  Timer starten
-</button>
-
 <mat-drawer-container class="example-container" autosize>
-  <mat-drawer #drawer class="example-sidenav" mode="side">
+  <mat-drawer #drawer class="example-sidenav" mode="side" [opened]="true">
     <p>
       <mat-nav-list>
-        <mat-list-item *ngFor="let link of links">
-          <a matLine href="{{ link[0] }}">{{ link[1] }}</a>
-        </mat-list-item>
+        <a mat-list-item [routerLink]="link[0]" *ngFor="let link of links">{{
+          link[1]
+        }}</a>
       </mat-nav-list>
     </p>
   </mat-drawer>
 
   <div class="example-sidenav-content">
-    <button type="button" mat-button (click)="drawer.toggle()">
-      Toggle sidenav
+    <button mat-button (click)="drawer.toggle()">
+      <i *ngIf="!drawer.opened" class="fa fa-angle-right"></i>
+      <i *ngIf="drawer.opened" class="fa fa-angle-left"></i>
     </button>
+    <span style="right: 0; position: absolute; margin: 5px 5px 0 0"
+      >25. Geiseltalseelauf</span
+    >
+
+    <div>
+      <router-outlet></router-outlet>
+    </div>
   </div>
 </mat-drawer-container>

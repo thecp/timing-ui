@@ -1,1 +1,41 @@
-<p>show-top-finishers works!</p>
+<mat-grid-list cols="3" rowHeight="1.5:1" *ngIf="finishers">
+  <ng-container *ngFor="let gender of ['W', 'M']">
+    <ng-container *ngFor="let track of ['21km', '11km', '7km']">
+      <mat-grid-tile>
+        <div style="display: flex; flex-direction: column; width: 100%">
+          <h4 style="text-align: center">{{ headlines[track][gender] }}</h4>
+          <div>
+            <table
+              mat-table
+              [dataSource]="finishers[track][gender]"
+              class="mat-elevation-z8"
+              style="width: calc(100% - 20px); margin: 10px"
+            >
+              <ng-container matColumnDef="lastname">
+                <th mat-header-cell *matHeaderCellDef>Nachname</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.lastname }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="firstname">
+                <th mat-header-cell *matHeaderCellDef>Vorname</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.firstname }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="netto">
+                <th mat-header-cell *matHeaderCellDef>Zeit</th>
+                <td mat-cell *matCellDef="let element">{{ element.netto }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+        </div>
+      </mat-grid-tile>
+    </ng-container>
+  </ng-container>
+</mat-grid-list>

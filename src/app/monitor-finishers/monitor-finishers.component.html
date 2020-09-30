@@ -1,1 +1,15 @@
-<p>monitor-finishers works!</p>
+<app-show-finishers></app-show-finishers>
+
+<form #fooForm="ngForm">
+  <input
+    type="text"
+    [(ngModel)]="time"
+    [pattern]="timePattern"
+    name="time"
+    required
+  />
+  <input type="number" [(ngModel)]="stno" name="stno" required />
+  <button type="button" (click)="update()" [disabled]="fooForm.invalid">
+    Senden
+  </button>
+</form>

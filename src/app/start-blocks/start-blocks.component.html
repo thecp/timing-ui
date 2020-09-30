@@ -1,0 +1,6 @@
+<div *ngFor="let block of blocks">
+  {{ block.startTime }}
+  <button mat-raised-button color="warn" (click)="startBlock(block.id)">
+    STARTEN
+  </button>
+</div>
